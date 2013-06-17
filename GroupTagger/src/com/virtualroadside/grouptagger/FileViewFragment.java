@@ -21,6 +21,8 @@ public class FileViewFragment extends ListFragment implements HasTitle
 {
 	static final String FILE_LIST = "FILE_LIST";
 	
+	// TODO: add a refresh button! Or menu item. Hmm.. 
+	
 	ArrayList<Item> musicFiles;
 	
 	//
@@ -31,6 +33,8 @@ public class FileViewFragment extends ListFragment implements HasTitle
 	public void onActivityCreated (Bundle savedInstanceState)
 	{
 		super.onActivityCreated(savedInstanceState);
+	
+		setEmptyText("No audio files found.");
 		
 		if (savedInstanceState != null && savedInstanceState.containsKey(FILE_LIST))
 		{
