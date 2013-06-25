@@ -4,24 +4,25 @@
 	android:layout_height="match_parent" >
 
 	<SeekBar
-		android:id="@+id/seekBar1"
-		android:layout_width="match_parent"
-		android:layout_height="wrap_content"
-		android:layout_alignParentLeft="true"
-		android:layout_below="@+id/textView2"
-		android:layout_toLeftOf="@+id/linearLayout1" />
+	    android:id="@+id/tag_music_bar"
+	    android:layout_width="match_parent"
+	    android:layout_height="wrap_content"
+	    android:layout_alignParentLeft="true"
+	    android:layout_below="@+id/tag_file_artist"
+	    android:layout_toLeftOf="@+id/linearLayout1"
+	    android:enabled="false" />
 
 	<ExpandableListView
 		android:id="@+id/tagListView"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:layout_alignParentLeft="true"
-		android:layout_below="@+id/seekBar1"
+		android:layout_below="@+id/tag_music_bar"
 		android:layout_toLeftOf="@+id/linearLayout1" >
 	</ExpandableListView>
 
 	<TextView
-		android:id="@+id/textView1"
+		android:id="@+id/tag_file_title"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_alignParentLeft="true"
@@ -31,11 +32,11 @@
 		android:textAppearance="?android:attr/textAppearanceMedium" />
 
 	<TextView
-		android:id="@+id/textView2"
+		android:id="@+id/tag_file_artist"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_alignParentLeft="true"
-		android:layout_below="@+id/textView1"
+		android:layout_below="@+id/tag_file_title"
 		android:layout_toLeftOf="@+id/linearLayout1"
 		android:textAppearance="?android:attr/textAppearanceSmall" />
 
@@ -48,24 +49,34 @@
 		android:orientation="vertical" >
 
 		<ImageButton
-			android:id="@+id/imageButton2"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:src="@android:drawable/ic_media_play" />
+		    android:id="@+id/tag_play_button"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:src="@drawable/ic_media_play" />
 
 		<ImageButton
-			android:id="@+id/imageButton1"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:src="@android:drawable/ic_media_previous" />
+		    android:id="@+id/tag_prev_button"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:src="@drawable/ic_media_previous" />
 
 		<ImageButton
-			android:id="@+id/imageButton3"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:scaleType="matrix"
-			android:src="@android:drawable/ic_media_next" />
+		    android:id="@+id/tag_next_button"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:scaleType="matrix"
+		    android:src="@drawable/ic_media_next" />
 
 	</LinearLayout>
+
+	<ImageButton
+	    android:id="@+id/tag_stop_button"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_alignParentRight="true"
+	    android:layout_below="@+id/linearLayout1"
+	    android:enabled="false"
+	    android:scaleType="matrix"
+	    android:src="@drawable/ic_media_stop" />
 
 </RelativeLayout>

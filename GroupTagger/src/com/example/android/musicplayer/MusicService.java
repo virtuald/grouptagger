@@ -16,6 +16,7 @@
 
 package com.example.android.musicplayer;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -39,8 +40,10 @@ import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import com.example.android.musicplayer.MusicRetriever;
+import com.example.android.musicplayer.MusicRetriever.Item;
 import com.example.android.musicplayer.PrepareMusicRetrieverTask.MusicRetrieverPreparedListener;
 import com.virtualroadside.grouptagger.MainActivity;
 import com.virtualroadside.grouptagger.R;
@@ -56,7 +59,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
                 OnErrorListener, MusicFocusable, MusicRetrieverPreparedListener {
 
     // The tag we put on debug messages
-    final static String TAG = "RandomMusicPlayer";
+    final static String TAG = "MusicService";
 
     // These are the Intent actions that we are prepared to handle. Notice that the fact these
     // constants exist in our class is a mere convenience: what really defines the actions our
@@ -65,10 +68,12 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     public static final String ACTION_TOGGLE_PLAYBACK =
             "com.example.android.musicplayer.action.TOGGLE_PLAYBACK";
     public static final String ACTION_PLAY = "com.example.android.musicplayer.action.PLAY";
+    	public static final String PLAY_IDX = "PLAY_IDX";
+    	
     public static final String ACTION_PAUSE = "com.example.android.musicplayer.action.PAUSE";
     public static final String ACTION_STOP = "com.example.android.musicplayer.action.STOP";
-    public static final String ACTION_SKIP = "com.example.android.musicplayer.action.SKIP";
-    public static final String ACTION_REWIND = "com.example.android.musicplayer.action.REWIND";
+    public static final String ACTION_NEXT = "com.example.android.musicplayer.action.NEXT";
+    public static final String ACTION_PREV = "com.example.android.musicplayer.action.PREV";
     public static final String ACTION_URL = "com.example.android.musicplayer.action.URL";
 
     // The volume we set the media player to when we lose audio focus, but are allowed to reduce
@@ -78,7 +83,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     // service binder interface
     public class MusicServiceBinder extends Binder
     {
-    	MusicService getService()
+    	public MusicService getService()
     	{
     		return MusicService.this;
     	}
@@ -95,7 +100,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     AudioFocusHelper mAudioFocusHelper = null;
 
     // indicates the state our service:
-    enum State {
+    public enum State {
         Retrieving, // the MediaRetriever is retrieving music
         Stopped,    // media player is stopped and not prepared to play
         Preparing,  // media player is preparing...
@@ -110,6 +115,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     // if in Retrieving mode, this flag indicates whether we should start playing immediately
     // when we are ready or not.
     boolean mStartPlayingAfterRetrieve = false;
+    Integer mSeekPosition = null;
 
     enum PauseReason {
         UserRequest,  // paused by user request
@@ -128,10 +134,12 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     AudioFocus mAudioFocus = AudioFocus.NoFocusNoDuck;
 
     // list of music
-    ArrayList<MusicRetriever.Item> mTtems;
+    Object mItemsLock = new Object();
+    ArrayList<MusicRetriever.Item> mItems;
     
-    // title of the song we are currently playing
-    String mSongTitle = "";
+    // song we are currently playing
+    Integer mCurrentIdx = null;
+    Item mCurrentItem = null;
 
     // The ID we use for the notification (the onscreen alert that appears at the notification
     // area at the top of the screen as an icon -- and as text as well if the user expands the
@@ -209,12 +217,12 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
         if (action.equals(ACTION_TOGGLE_PLAYBACK)) processTogglePlaybackRequest();
-        else if (action.equals(ACTION_PLAY)) processPlayRequest();
+        else if (action.equals(ACTION_PLAY)) processPlayRequest(intent);
         else if (action.equals(ACTION_PAUSE)) processPauseRequest();
-        else if (action.equals(ACTION_SKIP)) processSkipRequest();
+        else if (action.equals(ACTION_NEXT)) processSkipRequest();
         else if (action.equals(ACTION_STOP)) processStopRequest();
-        else if (action.equals(ACTION_REWIND)) processRewindRequest();
-        else if (action.equals(ACTION_URL)) processAddRequest(intent);
+        else if (action.equals(ACTION_PREV)) processRewindRequest();
+        //else if (action.equals(ACTION_URL)) processAddRequest(intent);
 
         return START_NOT_STICKY; // Means we started the service, but don't want it to
                                  // restart in case it's killed.
@@ -222,13 +230,22 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
 
     void processTogglePlaybackRequest() {
         if (mState == State.Paused || mState == State.Stopped) {
-            processPlayRequest();
+            processPlayRequest(null);
         } else {
             processPauseRequest();
         }
     }
 
-    void processPlayRequest() {
+    void processPlayRequest(Intent intent) 
+    {
+    	boolean forceNext = false;
+    	
+    	if (intent != null && intent.hasExtra(PLAY_IDX))
+    	{
+    		mCurrentIdx = intent.getIntExtra(PLAY_IDX, 0) - 1;
+    		forceNext = true;
+    	}
+    	
         if (mState == State.Retrieving) {
             // If we are still retrieving media, just set the flag to start playing when we're
             // ready
@@ -240,14 +257,16 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
 
         // actually play the song
 
-        if (mState == State.Stopped) {
+        if (mState == State.Stopped || forceNext) 
+        {
             // If we're stopped, just go ahead to the next song and start playing
             playNextSong();
         }
-        else if (mState == State.Paused) {
+        else if (mState == State.Paused) 
+        {
             // If we're paused, just continue playback and restore the 'foreground service' state.
             mState = State.Playing;
-            setUpAsForeground(mSongTitle + " (playing)");
+            setUpAsForeground(mCurrentItem.getTitle() + " (playing)");
             configAndStartMediaPlayer();
         }
 
@@ -272,6 +291,8 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
             mPlayer.pause();
             relaxResources(false); // while paused, we always retain the MediaPlayer
             // do not give up audio focus
+            
+            notifyStateChange();
         }
 
         // Tell any remote controls that our playback state is 'paused'.
@@ -281,9 +302,30 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
         }
     }
 
-    void processRewindRequest() {
+    void processRewindRequest() 
+    {
+    	boolean prev = false;
+    	
         if (mState == State.Playing || mState == State.Paused)
-            mPlayer.seekTo(0);
+        {
+        	if (mPlayer.getCurrentPosition() < 2000)
+        		prev = true;
+        	else
+        		mPlayer.seekTo(0);
+        }
+        else
+        {
+        	prev = true;
+        }
+        
+        // go to previous song
+        if (prev)
+        {
+        	if (mCurrentIdx != null)
+        		mCurrentIdx -= 2;
+        	
+        	playNextSong();
+        }
     }
 
     void processSkipRequest() {
@@ -300,6 +342,9 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     void processStopRequest(boolean force) {
         if (mState == State.Playing || mState == State.Paused || force) {
             mState = State.Stopped;
+            mCurrentItem = null;
+            
+            notifyStateChange();
 
             // let go of all resources...
             relaxResources(true);
@@ -362,8 +407,17 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
             mPlayer.setVolume(1.0f, 1.0f); // we can be loud
 
         if (!mPlayer.isPlaying()) mPlayer.start();
+        
+        if (mSeekPosition != null)
+        {
+        	mPlayer.seekTo(mSeekPosition);
+        	mSeekPosition = null;
+        }
+        
+        notifyStateChange();
     }
 
+    /*
     void processAddRequest(Intent intent) {
     	
     	// TODO: Do this appropriately
@@ -381,7 +435,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
             tryToGetAudioFocus();
             playNextSong();
         }
-    }
+    }*/
 
     void tryToGetAudioFocus() {
         if (mAudioFocus != AudioFocus.Focused && mAudioFocusHelper != null
@@ -395,14 +449,37 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
      * manualUrl is non-null, then it specifies the URL or path to the song that will be played
      * next.
      */
-    void playNextSong() {
+    @SuppressLint("InlinedApi")
+	void playNextSong() {
         mState = State.Stopped;
         relaxResources(false); // release everything except MediaPlayer
 
         try {
             MusicRetriever.Item playingItem = null;
-           
-            //playingItem = mRetriever.getRandomItem();
+            
+            if (mCurrentIdx == null || mCurrentIdx < 0)
+            	mCurrentIdx = -1;
+            
+            mCurrentIdx += 1;
+            
+            int itemsLen;
+            
+			synchronized (mItemsLock)
+            {
+            	itemsLen = mItems.size();
+            	
+            	if (mCurrentIdx < itemsLen)
+            		mCurrentItem = playingItem = mItems.get(mCurrentIdx);
+            }
+            
+            // wrap around for now
+            if (mCurrentIdx >= itemsLen)
+            {
+            	Toast.makeText(this, "End of playback", Toast.LENGTH_LONG).show();
+            	processStopRequest(true);
+            	return;
+            }
+            
             if (playingItem == null) {
                 Toast.makeText(this,
                         "No available music to play. Place some music on your external storage "
@@ -417,10 +494,11 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
             mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mPlayer.setDataSource(getApplicationContext(), playingItem.getURI());
 
-            mSongTitle = playingItem.getTitle();
-
+            
             mState = State.Preparing;
-            setUpAsForeground(mSongTitle + " (loading)");
+            setUpAsForeground(mCurrentItem.getTitle() + " (loading)");
+            
+            notifyStateChange();
 
             // Use the media button APIs (if available) to register ourselves for media button
             // events
@@ -485,16 +563,17 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     public void onPrepared(MediaPlayer player) {
         // The media player is done preparing. That means we can start playing!
         mState = State.Playing;
-        updateNotification(mSongTitle + " (playing)");
+        updateNotification(mCurrentItem.getTitle() + " (playing)");
         configAndStartMediaPlayer();
     }
 
     /** Updates the notification. */
-    void updateNotification(String text) {
+    @SuppressWarnings("deprecation")
+	void updateNotification(String text) {
         PendingIntent pi = PendingIntent.getActivity(getApplicationContext(), 0,
                 new Intent(getApplicationContext(), MainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT);
-        mNotification.setLatestEventInfo(getApplicationContext(), "RandomMusicPlayer", text, pi);
+        mNotification.setLatestEventInfo(getApplicationContext(), "GroupTagger", text, pi);
         mNotificationManager.notify(NOTIFICATION_ID, mNotification);
     }
 
@@ -503,7 +582,8 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
      * something the user is actively aware of (such as playing music), and must appear to the
      * user as a notification. That's why we create the notification here.
      */
-    void setUpAsForeground(String text) {
+    @SuppressWarnings("deprecation")
+	void setUpAsForeground(String text) {
         PendingIntent pi = PendingIntent.getActivity(getApplicationContext(), 0,
                 new Intent(getApplicationContext(), MainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT);
@@ -511,7 +591,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
         mNotification.tickerText = text;
         mNotification.icon = R.drawable.ic_stat_playing;
         mNotification.flags |= Notification.FLAG_ONGOING_EVENT;
-        mNotification.setLatestEventInfo(getApplicationContext(), "RandomMusicPlayer",
+        mNotification.setLatestEventInfo(getApplicationContext(), "GroupTagger",
                 text, pi);
         startForeground(NOTIFICATION_ID, mNotification);
     }
@@ -526,6 +606,9 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
         Log.e(TAG, "Error: what=" + String.valueOf(what) + ", extra=" + String.valueOf(extra));
 
         mState = State.Stopped;
+        mCurrentItem = null;
+        notifyStateChange();
+        
         relaxResources(true);
         giveUpAudioFocus();
         return true; // true indicates we handled the error
@@ -553,14 +636,21 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     public void onMusicRetrieverPrepared(ArrayList<MusicRetriever.Item> items) {
         // Done retrieving!
         mState = State.Stopped;
-        mTtems = items;
         
-        
+        synchronized (mItemsLock)
+        {
+        	mItems = items;
+        }
         
         // If the flag indicates we should start playing after retrieving, let's do that now.
         if (mStartPlayingAfterRetrieve) {
             tryToGetAudioFocus();
             playNextSong();
+        }
+        else
+        {
+        	// notify listeners that something happened
+        	notifyStateChange();
         }
     }
 
@@ -576,7 +666,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     @Override
     public IBinder onBind(Intent arg0) 
     {
-    	arg0.
+    	Log.i(TAG, "debug: binding service");
         return mBinder;
     }
     
@@ -591,14 +681,76 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     
     public static interface MusicEventNotification
     {
-    	public void onStateChange(State newState);
+    	// item may be null
+    	public void onStateChange(State newState, Item newItem);
     }
     
-    MusicEventNotification mNotifications;
+    ArrayList<MusicEventNotification> mSubscribers = new ArrayList<MusicEventNotification>();
     
-    public void subscribeForNotifications()
+    public void subscribeForNotifications(MusicEventNotification cb)
     {
+    	synchronized (mSubscribers) 
+    	{
+    		mSubscribers.add(cb);
+		}
     	
+    	cb.onStateChange(mState, mCurrentItem);
+    }
+    
+    public void unsubscribeForNotifications(MusicEventNotification cb)
+    {
+    	synchronized (mSubscribers) 
+    	{
+    		Iterator<MusicEventNotification> i = mSubscribers.iterator();
+    		while (i.hasNext())
+    		{
+    			if (i.next().equals(cb))
+    				i.remove();
+    		}
+		}
+    }
+    
+    
+    void notifyStateChange()
+    {
+    	synchronized (mSubscribers) 
+    	{
+			for (MusicEventNotification subscriber: mSubscribers)
+			{
+				subscriber.onStateChange(mState, mCurrentItem);
+			}
+		}
+    }
+    
+    //
+    // Service interface
+    //
+    
+    public ArrayList<Item> getAudioItems()
+    {
+    	synchronized (mItemsLock)
+    	{
+    		return mItems;
+    	}
+    }
+    
+    public int getTrackDuration()
+    {
+    	return mPlayer.getDuration();
+    }
+    
+    public int getTrackPosition()
+    {
+    	return mPlayer.getCurrentPosition();
+    }
+    
+    // seek current track to position
+    public void seekTo(int position)
+    {
+    	if (mState == State.Playing)
+    		mPlayer.seekTo(position);
+    	else
+    		mSeekPosition = position;
     }
     
 }

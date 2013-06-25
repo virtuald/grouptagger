@@ -33,13 +33,13 @@
             </intent-filter>
         </activity>
 
-        <service android:exported="false" android:name=".MusicService">
+        <service android:exported="false" android:name="com.example.android.musicplayer.MusicService">
             <intent-filter>
                 <action android:name="com.example.android.musicplayer.action.TOGGLE_PLAYBACK" />
                 <action android:name="com.example.android.musicplayer.action.PLAY" />
                 <action android:name="com.example.android.musicplayer.action.PAUSE" />
-                <action android:name="com.example.android.musicplayer.action.SKIP" />
-                <action android:name="com.example.android.musicplayer.action.REWIND" />
+                <action android:name="com.example.android.musicplayer.action.NEXT" />
+                <action android:name="com.example.android.musicplayer.action.PREV" />
                 <action android:name="com.example.android.musicplayer.action.STOP" />
             </intent-filter>
             <intent-filter>

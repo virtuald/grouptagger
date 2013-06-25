@@ -10,6 +10,10 @@ import java.util.SortedMap;
 import org.json.JSONException;
 
 import com.example.android.musicplayer.MusicRetriever.Item;
+import com.example.android.musicplayer.MusicService;
+import com.example.android.musicplayer.MusicService.MusicEventNotification;
+import com.example.android.musicplayer.MusicService.MusicServiceBinder;
+import com.example.android.musicplayer.MusicService.State;
 import com.virtualroadside.grouptagger.MainActivity.HasTitle;
 import com.virtualroadside.grouptagger.tagging.TagCategories;
 import com.virtualroadside.grouptagger.tagging.TagCategories.Tag;
@@ -17,26 +21,39 @@ import com.virtualroadside.grouptagger.tagging.TagCategories.TagCategory;
 import com.virtualroadside.grouptagger.ui.MultiViewListAdapter;
 import com.virtualroadside.grouptagger.ui.MultiViewListAdapter.Row;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.IBinder;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ExpandableListView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class TagViewFragment extends Fragment implements HasTitle
 {
+	private static final String TAG = "TagViewFragment";
 	
 	TagCategories defaultCategories = null;
 	TagCategories currentTags = new TagCategories();
@@ -44,6 +61,20 @@ public class TagViewFragment extends Fragment implements HasTitle
 	ExpandableListView listView;
 	TagViewAdapter mAdapter;
 	
+	TextView mTitleText;
+	TextView mArtistText;
+	
+	ImageButton mPlayButton;
+	ImageButton mPrevButton;
+	ImageButton mNextButton;
+	ImageButton mStopButton;
+	
+	MusicService mService;
+	
+	SeekBar mMusicSeekBar;
+	
+	// item currently being played
+	Item mCurrentItem = null;
 	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -55,6 +86,22 @@ public class TagViewFragment extends Fragment implements HasTitle
 		
 		listView = (ExpandableListView)view.findViewById(R.id.tagListView);
 		
+		mTitleText = (TextView)view.findViewById(R.id.tag_file_title);
+		mArtistText = (TextView)view.findViewById(R.id.tag_file_artist);
+		
+		mPlayButton = (ImageButton)view.findViewById(R.id.tag_play_button);
+		mPrevButton = (ImageButton)view.findViewById(R.id.tag_prev_button);
+		mNextButton = (ImageButton)view.findViewById(R.id.tag_next_button);
+		mStopButton = (ImageButton)view.findViewById(R.id.tag_stop_button);
+		
+		mMusicSeekBar = (SeekBar)view.findViewById(R.id.tag_music_bar);
+		mMusicSeekBar.setOnTouchListener(onSeekBarTouched);
+		
+		mPlayButton.setOnClickListener(onPlayClicked);
+		mPrevButton.setOnClickListener(onPrevClicked);
+		mNextButton.setOnClickListener(onNextClicked);
+		mStopButton.setOnClickListener(onStopClicked);
+		
 		return view;
 	}
 	
@@ -65,12 +112,35 @@ public class TagViewFragment extends Fragment implements HasTitle
 		
 		mAdapter = new TagViewAdapter();
 		listView.setAdapter(mAdapter);
+		
+		// connect to the service
+		Intent intent = new Intent(getActivity(), MusicService.class);
+		getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+	}
+	
+	@Override
+	public void onStop()
+	{
+		super.onStop();
+		
+		Log.i(TAG, "onStop");
+		
+		if (mService != null)
+		{
+			Log.i(TAG, "unbind");
+			mService.unsubscribeForNotifications(mEventNotification);
+			getActivity().unbindService(mConnection);
+			mService = null;
+		}
+		
+		cancelProgressHandler();
+		mCurrentItem = null;
 	}
 	
 	@Override
 	public void onSaveInstanceState(Bundle outState)
 	{
-		
+		super.onSaveInstanceState(outState);
 	}
 
 	@Override
@@ -136,11 +206,152 @@ public class TagViewFragment extends Fragment implements HasTitle
 		
 	}
 	
-	// events.. 
+	//
+	// Service connection
+	//
+	
+	ServiceConnection mConnection = new ServiceConnection() 
+	{	
+
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) 
+		{
+			Log.i(TAG, "onServiceConnect");
+			
+			MusicServiceBinder binder = (MusicServiceBinder)service;
+			mService = binder.getService();
+			
+			mService.subscribeForNotifications(mEventNotification);
+		}
+		
+		@Override
+		public void onServiceDisconnected(ComponentName name) 
+		{
+			mService = null;
+		}
+	};
+	
+	//
+	// Audio player synchronization
+	//
+	
+	MusicEventNotification mEventNotification = new MusicEventNotification() 
+	{	
+		@Override
+		public void onStateChange(State newState, Item newItem) 
+		{
+			mCurrentItem = newItem;
+			
+			if (mCurrentItem != null)
+			{
+				mTitleText.setText(mCurrentItem.getTitle());
+				mArtistText.setText(mCurrentItem.getArtist());
+			}
+			else
+			{
+				mTitleText.setText("No file selected");
+				mArtistText.setText(null);
+			}
+			
+			switch (newState)
+			{
+				case Paused:
+					mStopButton.setEnabled(true);
+					mMusicSeekBar.setEnabled(true);
+					cancelProgressHandler();
+					break;
+					
+				case Playing:
+					mStopButton.setEnabled(true);
+					mMusicSeekBar.setEnabled(true);
+					mMusicSeekBar.setMax(mService.getTrackDuration());
+					progressUpdater.run();
+					break;
+					
+				case Stopped:
+					mStopButton.setEnabled(false);
+					mMusicSeekBar.setEnabled(false);
+					mMusicSeekBar.setProgress(0);
+					break;
+				
+				default:
+					break;
+			}
+		}
+	};
+	
 	
 	// on new track started!
 	
 	// connect buttons to service
+	OnClickListener onPlayClicked = new OnClickListener() 
+	{	
+		@Override
+		public void onClick(View v) 
+		{
+			getActivity().startService(new Intent(MusicService.ACTION_TOGGLE_PLAYBACK));
+		}
+	};
+	
+	OnClickListener onPrevClicked = new OnClickListener() 
+	{	
+		@Override
+		public void onClick(View v) 
+		{
+			getActivity().startService(new Intent(MusicService.ACTION_PREV));
+		}
+	};
+	
+	OnClickListener onNextClicked = new OnClickListener() 
+	{	
+		@Override
+		public void onClick(View v) 
+		{
+			getActivity().startService(new Intent(MusicService.ACTION_NEXT));
+		}
+	};
+	
+	OnClickListener onStopClicked = new OnClickListener() 
+	{	
+		@Override
+		public void onClick(View v) 
+		{
+			getActivity().startService(new Intent(MusicService.ACTION_STOP));
+		}
+	};
+	
+	//
+	// SeekBar synchronization
+	//
+	
+	OnTouchListener onSeekBarTouched = new OnTouchListener() 
+	{	
+		@Override
+		public boolean onTouch(View v, MotionEvent event) 
+		{
+			mService.seekTo(mMusicSeekBar.getProgress());
+			return false;
+		}
+	};
+	
+	Handler progressHandler = new Handler();
+	Runnable progressUpdater = new Runnable() 
+	{	
+		@Override
+		public void run() 
+		{
+			if (mCurrentItem != null)
+			{
+				mMusicSeekBar.setProgress(mService.getTrackPosition());
+				progressHandler.postDelayed(this, 1000);
+			}
+		}
+	};
+	
+	void cancelProgressHandler()
+	{
+		progressHandler.removeCallbacks(progressUpdater);
+	}
 	
 	// other crap.. 
 	
