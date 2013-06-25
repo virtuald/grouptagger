@@ -31,13 +31,17 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.media.RemoteControlClient;
+import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
+import com.example.android.musicplayer.MusicRetriever;
+import com.example.android.musicplayer.PrepareMusicRetrieverTask.MusicRetrieverPreparedListener;
 import com.virtualroadside.grouptagger.MainActivity;
 import com.virtualroadside.grouptagger.R;
 
@@ -49,7 +53,7 @@ import com.virtualroadside.grouptagger.R;
  * Rewind, Skip, etc.
  */
 public class MusicService extends Service implements OnCompletionListener, OnPreparedListener,
-                OnErrorListener, MusicFocusable {
+                OnErrorListener, MusicFocusable, MusicRetrieverPreparedListener {
 
     // The tag we put on debug messages
     final static String TAG = "RandomMusicPlayer";
@@ -70,6 +74,18 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     // The volume we set the media player to when we lose audio focus, but are allowed to reduce
     // the volume instead of stopping playback.
     public static final float DUCK_VOLUME = 0.1f;
+    
+    // service binder interface
+    public class MusicServiceBinder extends Binder
+    {
+    	MusicService getService()
+    	{
+    		return MusicService.this;
+    	}
+    }
+    
+    // Binder for clients
+    private final IBinder mBinder = new MusicServiceBinder();
 
     // our media player
     MediaPlayer mPlayer = null;
@@ -111,6 +127,9 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     }
     AudioFocus mAudioFocus = AudioFocus.NoFocusNoDuck;
 
+    // list of music
+    ArrayList<MusicRetriever.Item> mTtems;
+    
     // title of the song we are currently playing
     String mSongTitle = "";
 
@@ -118,10 +137,6 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     // area at the top of the screen as an icon -- and as text as well if the user expands the
     // notification area).
     final int NOTIFICATION_ID = 1;
-
-    // Our instance of our MusicRetriever, which handles scanning for media and
-    // providing titles and URIs as we need.
-    MusicRetriever mRetriever;
 
     // our RemoteControlClient object, which will use remote control APIs available in
     // SDK level >= 14, if they're available.
@@ -172,8 +187,7 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
         mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         
         // Create the retriever and start an asynchronous task that will prepare it.
-        //mRetriever = new MusicRetriever(getContentResolver());
-        //(new PrepareMusicRetrieverTask(mRetriever,this)).execute();
+        (new PrepareMusicRetrieverTask(getContentResolver(),this)).execute();
 
         // create the Audio Focus Helper, if the Audio Focus feature is available (SDK 8 or above)
         if (android.os.Build.VERSION.SDK_INT >= 8)
@@ -536,10 +550,13 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
             configAndStartMediaPlayer();
     }
 
-    public void onMusicRetrieverPrepared() {
+    public void onMusicRetrieverPrepared(ArrayList<MusicRetriever.Item> items) {
         // Done retrieving!
         mState = State.Stopped;
-
+        mTtems = items;
+        
+        
+        
         // If the flag indicates we should start playing after retrieving, let's do that now.
         if (mStartPlayingAfterRetrieve) {
             tryToGetAudioFocus();
@@ -557,7 +574,31 @@ public class MusicService extends Service implements OnCompletionListener, OnPre
     }
 
     @Override
-    public IBinder onBind(Intent arg0) {
-        return null;
+    public IBinder onBind(Intent arg0) 
+    {
+    	arg0.
+        return mBinder;
     }
+    
+    @Override
+    public boolean onUnbind(Intent arg0) {
+    	return false;
+    }
+    
+    //
+    // Event notification interface
+    //
+    
+    public static interface MusicEventNotification
+    {
+    	public void onStateChange(State newState);
+    }
+    
+    MusicEventNotification mNotifications;
+    
+    public void subscribeForNotifications()
+    {
+    	
+    }
+    
 }

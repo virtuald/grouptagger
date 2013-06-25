@@ -41,10 +41,9 @@ public class FileViewFragment extends ListFragment implements HasTitle
 			musicFiles = savedInstanceState.getParcelableArrayList(FILE_LIST);
 			setupAdapter();
 		}
-		else
-		{
-			loadFiles();
-		}
+		
+		// connect to the service
+		getActivity().bindService(service, conn, flags)
 	}
 	
 	@Override
@@ -73,20 +72,17 @@ public class FileViewFragment extends ListFragment implements HasTitle
 	}
 	
 	//
+	// Service interface
+	//
+	
+	
+	
+	//
 	// Implementation
 	//
 	
 	
-	/**
-	 * Loads the files asynchronously
-	 * 
-	 * TODO: What about a cursor adapter instead? But then we have to 
-	 * figure out how to deal with the service too... 
-	 */
-	void loadFiles()
-	{
-		(new PrepareMusicRetrieverTask(getActivity().getContentResolver(), onMusicPrepared)).execute();
-	}
+	
 	
 	MusicRetrieverPreparedListener onMusicPrepared = new MusicRetrieverPreparedListener() 
 	{
