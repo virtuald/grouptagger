@@ -1,5 +1,6 @@
 package com.virtualroadside.grouptagger;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import com.virtualroadside.grouptagger.MainActivity.HasTitle;
 import com.virtualroadside.grouptagger.tagging.TagCategories;
 import com.virtualroadside.grouptagger.tagging.TagCategories.Tag;
 import com.virtualroadside.grouptagger.tagging.TagCategories.TagCategory;
+import com.virtualroadside.grouptagger.tagging.TagUtil;
 import com.virtualroadside.grouptagger.ui.MultiViewListAdapter;
 import com.virtualroadside.grouptagger.ui.MultiViewListAdapter.Row;
 
@@ -244,6 +246,9 @@ public class TagViewFragment extends Fragment implements HasTitle
 			
 			if (mCurrentItem != null)
 			{
+				File f = Util.getFileFromUri(getActivity(), mCurrentItem.getURI());
+				TagUtil.loadFile(f);
+				
 				mTitleText.setText(mCurrentItem.getTitle());
 				mArtistText.setText(mCurrentItem.getArtist());
 			}
