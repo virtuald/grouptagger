@@ -66,17 +66,17 @@
 		    android:layout_height="wrap_content"
 		    android:scaleType="matrix"
 		    android:src="@drawable/ic_media_next" />
+		
+		<ImageButton
+		    android:id="@+id/tag_stop_button"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:enabled="false"
+		    android:scaleType="matrix"
+		    android:src="@drawable/ic_media_stop" />
 
 	</LinearLayout>
 
-	<ImageButton
-	    android:id="@+id/tag_stop_button"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:layout_alignParentRight="true"
-	    android:layout_below="@+id/linearLayout1"
-	    android:enabled="false"
-	    android:scaleType="matrix"
-	    android:src="@drawable/ic_media_stop" />
+	
 
 </RelativeLayout>
