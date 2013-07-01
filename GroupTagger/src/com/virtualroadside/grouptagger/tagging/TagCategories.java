@@ -3,6 +3,7 @@ package com.virtualroadside.grouptagger.tagging;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.SortedMap;
@@ -26,14 +27,19 @@ public class TagCategories
 		
 		public Tag(String name)
 		{
+			this(name, false);
+		}
+		
+		public Tag(String name, boolean selected)
+		{
 			this.name = name;
+			this.selected = selected;
 		}
 		
 		// copy constructor
 		public Tag(Tag other)
 		{
-			this.name = other.name;
-			this.selected = other.selected;
+			this(other.name, other.selected);
 		}
 	}
 	
@@ -100,9 +106,84 @@ public class TagCategories
 		return categories.get(catPosition).tags.size();
 	}
 	
+	// set the number of selected from a tag string
+	public void setSelectedFromString(String tagsString)
+	{
+		TagCategory uncategorized = null;
+		String [] tags = tagsString.split(" ");
+		
+		for (String tagString: tags)
+		{
+			boolean found = false;
+			
+			// TODO: deal with underscore correctly
+			tagString = tagString.replace("_", " ");
+			
+			// linear search for now.. for small N this is good enough
+			for (TagCategory category: categories)
+			{
+				// cache this for later.. 
+				if (uncategorized == null && category.name.equals("uncategorized"))
+					uncategorized = category;
+				
+				for (Tag tag: category.tags)
+				{
+					if (tag.name.equals(tagString))
+					{
+						tag.selected = true;
+						found = true;
+						break;
+					}
+				}
+				
+				if (found)
+					break;
+			}
+			
+			if (!found)
+			{
+				// add a new tag for it under uncategorized
+				if (uncategorized == null)
+				{
+					uncategorized = new TagCategory();
+					uncategorized.name = "uncategorized";
+					uncategorized.expanded = true;
+					
+					categories.add(uncategorized);
+				}
+				
+				uncategorized.tags.add(new Tag(tagString));
+			}
+		}
+	}
 	
-	// todo: combinatorial API for actual tags
-	
+	public String getSelectedAsString()
+	{
+		ArrayList<String> selected = new ArrayList<String>();
+		
+		for (TagCategory category: categories)
+		{
+			for (Tag tag: category.tags)
+			{
+				if (tag.selected)
+					selected.add(tag.name.replace(" ", "_"));
+			}
+		}
+		
+		// sort the list by name
+		Collections.sort(selected);
+		
+		// concatenate them together
+		StringBuilder builder = new StringBuilder();
+		
+		for (String s: selected)
+		{
+			builder.append(s);
+			builder.append(" ");
+		}
+		
+		return builder.toString().trim();
+	}
 	
 	/*
 	 * JSON Format:
