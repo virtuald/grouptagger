@@ -45,6 +45,8 @@ import android.widget.BaseAdapter;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.CompoundButton;
 import android.widget.ExpandableListView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -127,6 +129,8 @@ public class TagViewFragment extends Fragment implements HasTitle
 		
 		Log.i(TAG, "onStop");
 		
+		saveCurrentItem();
+		
 		if (mService != null)
 		{
 			Log.i(TAG, "unbind");
@@ -151,16 +155,37 @@ public class TagViewFragment extends Fragment implements HasTitle
 		return "GroupTagger";
 	}
 	
+	public void saveCurrentItem()
+	{
+		if (mCurrentItem == null)
+			return;
+		
+		String tagString = currentTags.getSelectedAsString();
+		
+		Log.i(TAG, "Saving tags: " + tagString);
+		
+		File tagsFile = Util.getFileFromUri(getActivity(), mCurrentItem.getURI());
+		TagUtil.setTagsOnFileIfChanged(tagsFile, tagString);
+	}
+	
 	public void showTags()
 	{
-		// load cars
-		
-		// 
+		// reset the categories to defaults
 		if (defaultCategories != null)
 		{
 			currentTags = new TagCategories(defaultCategories);
 		}
+
+		// load the tags for the currently selected file, and set them
+		if (mCurrentItem != null)
+		{
+			File tagsFile = Util.getFileFromUri(getActivity(), mCurrentItem.getURI());
+			String tags = TagUtil.getTagsFromFile(tagsFile);
+			
+			currentTags.setSelectedFromString(tags);
+		}
 		
+		// change it for the user
 		if (mAdapter != null)
 			mAdapter.notifyDataSetChanged();
 	}
@@ -242,18 +267,31 @@ public class TagViewFragment extends Fragment implements HasTitle
 		@Override
 		public void onStateChange(State newState, Item newItem) 
 		{
-			mCurrentItem = newItem;
+			// update the tag display to show the current item
 			
-			if (mCurrentItem != null)
+			if (newItem != null)
 			{
-				File f = Util.getFileFromUri(getActivity(), mCurrentItem.getURI());
-				TagUtil.loadFile(f);
+				if (!newItem.equals(mCurrentItem))
+				{
+					saveCurrentItem();
+					mCurrentItem = newItem;
+					
+					showTags();
+				}
 				
-				mTitleText.setText(mCurrentItem.getTitle());
-				mArtistText.setText(mCurrentItem.getArtist());
+				mTitleText.setText(newItem.getTitle());
+				mArtistText.setText(newItem.getArtist());
 			}
-			else
+			else 
 			{
+				if (mCurrentItem != null)
+				{
+					saveCurrentItem();
+
+					mCurrentItem = null;
+					showTags();
+				}
+				
 				mTitleText.setText("No file selected");
 				mArtistText.setText(null);
 			}
@@ -261,12 +299,14 @@ public class TagViewFragment extends Fragment implements HasTitle
 			switch (newState)
 			{
 				case Paused:
+					mPlayButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_media_play));
 					mStopButton.setEnabled(true);
 					mMusicSeekBar.setEnabled(true);
 					cancelProgressHandler();
 					break;
 					
 				case Playing:
+					mPlayButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_media_pause));
 					mStopButton.setEnabled(true);
 					mMusicSeekBar.setEnabled(true);
 					mMusicSeekBar.setMax(mService.getTrackDuration());
@@ -274,6 +314,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 					break;
 					
 				case Stopped:
+					mPlayButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_media_play));
 					mStopButton.setEnabled(false);
 					mMusicSeekBar.setEnabled(false);
 					mMusicSeekBar.setProgress(0);
@@ -442,6 +483,16 @@ public class TagViewFragment extends Fragment implements HasTitle
 			if (convertView == null)
 			{
 				checkBox = new CheckBox(getActivity());
+				checkBox.setTextSize(0);
+				checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() 
+				{	
+					@Override
+					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) 
+					{
+						Tag tag = (Tag)buttonView.getTag();
+						tag.selected = isChecked;
+					}
+				});
 			}
 			else
 			{
@@ -450,8 +501,10 @@ public class TagViewFragment extends Fragment implements HasTitle
 			
 			Tag tag = (Tag)getChild(groupPosition, childPosition);
 			
+			checkBox.setTag(tag);
 			checkBox.setText(tag.name);
 			checkBox.setChecked(tag.selected);
+			
 			return checkBox;
 		}
 
