@@ -35,6 +35,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -409,6 +410,16 @@ public class TagViewFragment extends Fragment implements HasTitle
 	
 	class TagViewAdapter extends BaseExpandableListAdapter
 	{
+		float padding;
+		
+		public TagViewAdapter()
+		{
+			super();
+			
+			TypedValue value = new TypedValue();
+			getActivity().getTheme().resolveAttribute(android.R.attr.expandableListPreferredItemPaddingLeft, value, true);
+			padding = value.getDimension(getResources().getDisplayMetrics());
+		}
 
 		@Override
 		public int getGroupCount() 
@@ -461,6 +472,9 @@ public class TagViewFragment extends Fragment implements HasTitle
 			{
 				textView = new TextView(getActivity());
 				textView.setTypeface(null, Typeface.BOLD);
+				
+				
+				textView.setPadding((int)padding, 0, 0, 0);
 			}
 			else
 			{
