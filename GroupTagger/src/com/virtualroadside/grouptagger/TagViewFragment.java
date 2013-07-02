@@ -36,12 +36,14 @@ import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.Button;
@@ -117,10 +119,19 @@ public class TagViewFragment extends Fragment implements HasTitle
 		
 		mAdapter = new TagViewAdapter();
 		listView.setAdapter(mAdapter);
+	}
+	
+	@Override
+	public void onStart()
+	{
+		super.onStart();
 		
 		// connect to the service
-		Intent intent = new Intent(getActivity(), MusicService.class);
-		getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+		if (mService == null)
+		{
+			Intent intent = new Intent(getActivity(), MusicService.class);
+			getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+		}
 	}
 	
 	@Override
@@ -473,7 +484,12 @@ public class TagViewFragment extends Fragment implements HasTitle
 				textView = new TextView(getActivity());
 				textView.setTypeface(null, Typeface.BOLD);
 				
-				
+				// Layout parameters for the ExpandableListView
+	            AbsListView.LayoutParams lp = new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 64);
+	            textView.setLayoutParams(lp);
+	            
+	            // Center the text vertically
+	            textView.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
 				textView.setPadding((int)padding, 0, 0, 0);
 			}
 			else
