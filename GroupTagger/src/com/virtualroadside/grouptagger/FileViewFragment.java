@@ -222,6 +222,13 @@ public class FileViewFragment extends ListFragment implements HasTitle
 			
 			Item musicItem = mItems.get(position);
 			
+			/* When I fix jAudioTagger, should implement this... 
+			 * 
+			String indicator = "";
+			if (!musicItem.getHasGrouping())
+				indicator = "*";
+			*/
+			
 			title.setText(musicItem.getTitle());
 			artist.setText(musicItem.getArtist());
 

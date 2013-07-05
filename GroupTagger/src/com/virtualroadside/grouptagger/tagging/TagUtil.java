@@ -14,6 +14,24 @@ public class TagUtil
 	static final String TAG = "TagUtil";
 	
 
+	public static boolean hasGroupingTag(File file)
+	{
+		try 
+		{
+			AudioFile f = AudioFileIO.read(file);
+			Tag tag = f.getTag();
+			
+			// TODO: support multiple field types
+			
+			return tag.hasField(FieldKey.GROUPING);
+		} 
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
 	public static String getTagsFromFile(File file)
 	{
 		try 
@@ -35,7 +53,7 @@ public class TagUtil
 	public static void setTagsOnFileIfChanged(File file, String tagString) throws Exception
 	{
 		AudioFile f = AudioFileIO.read(file);
-		Tag tag = f.getTag();
+		Tag tag = f.getTagOrCreateDefault();
 		
 		String oldTags = tag.getFirst(FieldKey.GROUPING);
 		

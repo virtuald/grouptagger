@@ -18,6 +18,7 @@ package com.example.android.musicplayer;
 
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Parcel;
@@ -25,7 +26,11 @@ import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.util.Log;
 
+import java.io.File;
 import java.util.ArrayList;
+
+import com.virtualroadside.grouptagger.Util;
+import com.virtualroadside.grouptagger.tagging.TagUtil;
 
 /**
  * Retrieves and organizes media to play. Before being used, you must call {@link #prepare()},
@@ -37,11 +42,13 @@ public class MusicRetriever {
     final String TAG = "MusicRetriever";
 
     ContentResolver mContentResolver;
+    Context mContext;
 
     // the items (songs) we have queried
     ArrayList<Item> mItems = new ArrayList<Item>();
 
-    public MusicRetriever(ContentResolver cr) {
+    public MusicRetriever(Context context, ContentResolver cr) {
+    	mContext = context;
         mContentResolver = cr;
     }
 
@@ -86,12 +93,28 @@ public class MusicRetriever {
         // add each song to mItems
         do {
             Log.i(TAG, "ID: " + cur.getString(idColumn) + " Title: " + cur.getString(titleColumn));
-            mItems.add(new Item(
-                    cur.getLong(idColumn),
-                    cur.getString(artistColumn),
-                    cur.getString(titleColumn),
-                    cur.getString(albumColumn),
-                    cur.getLong(durationColumn)));
+            Item item = new Item(cur.getLong(idColumn),
+				                 cur.getString(artistColumn),
+				                 cur.getString(titleColumn),
+				                 cur.getString(albumColumn),
+				                 cur.getLong(durationColumn));
+            
+            /*
+             *  TODO: This is incredibly slow because JAudioTagger keeps
+             *  opening up the file over and over again... 
+            try
+            {
+            	File tagsFile = Util.getFileFromUri(mContext, item.getURI());
+    			item.hasGrouping = TagUtil.hasGroupingTag(tagsFile);
+            }
+            catch (Exception e)
+            {
+            	// ignore this
+            }
+            */
+            
+            mItems.add(item);
+            
         } while (cur.moveToNext());
 
         Log.i(TAG, "Done querying media. MusicRetriever is ready.");
@@ -113,6 +136,7 @@ public class MusicRetriever {
         String title;
         String album;
         long duration;
+        boolean hasGrouping = false;
 
         public Item(long id, String artist, String title, String album, long duration) {
             this.id = id;
@@ -145,6 +169,11 @@ public class MusicRetriever {
         public Uri getURI() {
             return ContentUris.withAppendedId(
                     android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
+        }
+        
+        public boolean getHasGrouping()
+        {
+        	return hasGrouping;
         }
         
         //

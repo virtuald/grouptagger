@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import com.example.android.musicplayer.MusicRetriever.Item;
 
 import android.content.ContentResolver;
+import android.content.Context;
 import android.os.AsyncTask;
 
 /**
@@ -32,9 +33,9 @@ public class PrepareMusicRetrieverTask extends AsyncTask<Void, Void, Void> {
     MusicRetriever mRetriever;
     MusicRetrieverPreparedListener mListener;
 
-    public PrepareMusicRetrieverTask(ContentResolver cr, MusicRetrieverPreparedListener listener) 
+    public PrepareMusicRetrieverTask(Context context, ContentResolver cr, MusicRetrieverPreparedListener listener) 
     {
-        mRetriever = new MusicRetriever(cr);
+        mRetriever = new MusicRetriever(context, cr);
         mListener = listener;
     }
 
