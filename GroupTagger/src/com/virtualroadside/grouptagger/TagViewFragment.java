@@ -198,7 +198,16 @@ public class TagViewFragment extends Fragment implements HasTitle
 		Log.i(TAG, "Saving tags: " + tagString);
 		
 		File tagsFile = Util.getFileFromUri(getActivity(), mCurrentItem.getURI());
-		TagUtil.setTagsOnFileIfChanged(tagsFile, tagString);
+		try 
+		{
+			TagUtil.setTagsOnFileIfChanged(tagsFile, tagString);
+		} 
+		catch (Exception e) 
+		{
+			Toast.makeText(getActivity(), "Error saving tags for " + tagsFile.getName(), Toast.LENGTH_LONG).show();
+			Log.e(TAG, "Could not write tags for " + tagsFile.getAbsolutePath());
+			e.printStackTrace();
+		}
 	}
 	
 	public void showTags()
@@ -550,6 +559,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 			{
 				// TODO: reuse internal widgets too
 				flowLayout = (FlowLayout)convertView;
+				flowLayout.removeAllViews();
 			}
 			
 			for (int i = 0; i < mCurrentTags.getTagCount(groupPosition); ++i)

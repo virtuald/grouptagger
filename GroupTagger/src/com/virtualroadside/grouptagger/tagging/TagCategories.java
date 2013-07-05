@@ -322,6 +322,11 @@ public class TagCategories implements Parcelable
 		return categories;
 	}
 	
+	public void writeJson()
+	{
+		
+	}
+	
 	
 	//
     // Parcelable interface

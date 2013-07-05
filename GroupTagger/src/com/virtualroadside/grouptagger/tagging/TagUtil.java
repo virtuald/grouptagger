@@ -32,42 +32,33 @@ public class TagUtil
 		}
 	}
 	
-	public static void setTagsOnFileIfChanged(File file, String tagString)
+	public static void setTagsOnFileIfChanged(File file, String tagString) throws Exception
 	{
-		try 
+		AudioFile f = AudioFileIO.read(file);
+		Tag tag = f.getTag();
+		
+		String oldTags = tag.getFirst(FieldKey.GROUPING);
+		
+		// only save the tags if they've changed
+		if (oldTags == null || !oldTags.equals(tagString))
 		{
-			AudioFile f = AudioFileIO.read(file);
-			Tag tag = f.getTag();
-			
-			String oldTags = tag.getFirst(FieldKey.GROUPING);
-			
-			// only save the tags if they've changed
-			if (oldTags == null || !oldTags.equals(tagString))
+			if (tagString.isEmpty())
 			{
-				if (tagString.isEmpty())
-				{
-					Log.i(TAG, "Tags deleted for " + file.getAbsolutePath());
-					
-					tag.deleteField(FieldKey.GROUPING);
-				}
-				else
-				{
-					Log.i(TAG, "Tags changed from \"" + oldTags + "\" to \"" + tagString + "\" for "+ file.getAbsolutePath());
-					
-					tag.setField(FieldKey.GROUPING, tagString);
-					f.commit();
-				}
+				Log.i(TAG, "Tags deleted for " + file.getAbsolutePath());
+				
+				tag.deleteField(FieldKey.GROUPING);
 			}
 			else
 			{
-				Log.i(TAG, "Tags not changed for " + file.getAbsolutePath());
+				Log.i(TAG, "Tags changed from \"" + oldTags + "\" to \"" + tagString + "\" for "+ file.getAbsolutePath());
+				
+				tag.setField(FieldKey.GROUPING, tagString);
+				f.commit();
 			}
-			
-		} 
-		catch (Exception e)
+		}
+		else
 		{
-			Log.e(TAG, "Error saving tags for " + file.getAbsolutePath());
-			e.printStackTrace();
+			Log.i(TAG, "Tags not changed for " + file.getAbsolutePath());
 		}
 	}
 	
