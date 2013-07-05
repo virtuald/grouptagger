@@ -23,7 +23,7 @@ import android.util.JsonReader;
 
 public class TagCategories implements Parcelable
 {
-	public static class Tag implements Parcelable
+	public static class Tag implements Parcelable, Comparable<Tag>
 	{
 		public String name;
 		public boolean selected = false;
@@ -78,9 +78,15 @@ public class TagCategories implements Parcelable
 			dest.writeString(name);
 			dest.writeInt(selected ? 1 : 0);
 		}
+
+		@Override
+		public int compareTo(Tag another) 
+		{
+			return this.name.compareTo(another.name);
+		}
 	}
 	
-	public static class TagCategory implements Parcelable
+	public static class TagCategory implements Parcelable, Comparable<TagCategory>
 	{
 		public String name;
 		public boolean expanded = true;
@@ -136,6 +142,12 @@ public class TagCategories implements Parcelable
 			dest.writeInt(expanded ? 1 : 0);
 			dest.writeTypedList(tags);
 		}
+
+		@Override
+		public int compareTo(TagCategory another) 
+		{
+			return this.name.compareTo(another.name);
+		}
 	}
 	
 	// categories
@@ -158,6 +170,11 @@ public class TagCategories implements Parcelable
 	//
 	// ExpandableListViewAdapter related API
 	//
+	
+	public ArrayList<TagCategory> getCategories()
+	{
+		return categories;
+	}
 	
 	public TagCategory getCategory(int catPosition)
 	{
@@ -293,9 +310,14 @@ public class TagCategories implements Parcelable
 			for (int i = 0; i < tags.length(); ++i)
 				category.tags.add(new Tag(tags.getString(i)));
 			
+			// sort the data
+			Collections.sort(category.tags);
+			
 			// store the data 
 			categories.categories.add(category);
 		}
+		
+		Collections.sort(categories.categories);
 		
 		return categories;
 	}
