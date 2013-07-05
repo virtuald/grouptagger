@@ -62,6 +62,10 @@ public class TagViewFragment extends Fragment implements HasTitle
 {
 	private static final String TAG = "TagViewFragment";
 	
+	private static final String DEFAULT_CATEGORIES = "DEFAULT_CATEGORIES";
+	private static final String CURRENT_TAGS = "CURRENT_TAGS";
+	private static final String CURRENT_ITEM = "CURRENT_ITEM";
+	
 	TagCategories defaultCategories = null;
 	TagCategories currentTags = new TagCategories();
 	
@@ -86,8 +90,19 @@ public class TagViewFragment extends Fragment implements HasTitle
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
 	{
+		// restore stuff
+		if (savedInstanceState != null)
+		{
+			mCurrentItem = savedInstanceState.getParcelable(CURRENT_ITEM);
+			currentTags = savedInstanceState.getParcelable(CURRENT_TAGS);
+			defaultCategories = savedInstanceState.getParcelable(DEFAULT_CATEGORIES);
+		}
+		
 		// load the default tags
-		new TagLoader().execute();
+		if (defaultCategories == null)
+		{
+			new TagLoader().execute();
+		}
 		
 		View view = inflater.inflate(R.layout.fragment_tag_view, container, false);
 		
@@ -159,6 +174,10 @@ public class TagViewFragment extends Fragment implements HasTitle
 	public void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
+		
+		outState.putParcelable(CURRENT_ITEM, mCurrentItem);
+		outState.putParcelable(CURRENT_TAGS, currentTags);
+		outState.putParcelable(DEFAULT_CATEGORIES, defaultCategories);
 	}
 
 	@Override
