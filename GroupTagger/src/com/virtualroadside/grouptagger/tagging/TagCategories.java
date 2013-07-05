@@ -14,13 +14,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import com.example.android.musicplayer.MusicRetriever.Item;
 import com.virtualroadside.grouptagger.Util;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.JsonReader;
 
-public class TagCategories 
+public class TagCategories implements Parcelable
 {
-	public static class Tag
+	public static class Tag implements Parcelable
 	{
 		public String name;
 		public boolean selected = false;
@@ -41,9 +44,43 @@ public class TagCategories
 		{
 			this(other.name, other.selected);
 		}
+		
+		//
+        // Parcelable interface
+        //
+
+        public static final Parcelable.Creator<Tag> CREATOR = new Parcelable.Creator<Tag>() 
+        {
+		    public Tag createFromParcel(Parcel in) {
+		        return new Tag(in);
+		    }
+		
+		    public Tag[] newArray(int size) {
+		        return new Tag[size];
+		    }
+		};
+		
+		private Tag(Parcel in)
+		{
+			name = in.readString();
+			selected = in.readInt() == 0 ? false : true;
+		}
+        
+		@Override
+		public int describeContents() 
+		{
+			return 0;
+		}
+
+		@Override
+		public void writeToParcel(Parcel dest, int flags) 
+		{
+			dest.writeString(name);
+			dest.writeInt(selected ? 1 : 0);
+		}
 	}
 	
-	public static class TagCategory
+	public static class TagCategory implements Parcelable
 	{
 		public String name;
 		public boolean expanded = true;
@@ -62,6 +99,42 @@ public class TagCategories
 			
 			for (Tag tag: other.tags)
 				this.tags.add(new Tag(tag));
+		}
+		
+		//
+        // Parcelable interface
+        //
+
+        public static final Parcelable.Creator<TagCategory> CREATOR = new Parcelable.Creator<TagCategory>() 
+        {
+		    public TagCategory createFromParcel(Parcel in) {
+		        return new TagCategory(in);
+		    }
+		
+		    public TagCategory[] newArray(int size) {
+		        return new TagCategory[size];
+		    }
+		};
+		
+		private TagCategory(Parcel in)
+		{
+			name = in.readString();
+			expanded = in.readInt() == 0 ? false : true;
+			in.readTypedList(tags, Tag.CREATOR);
+		}
+        
+		@Override
+		public int describeContents() 
+		{
+			return 0;
+		}
+
+		@Override
+		public void writeToParcel(Parcel dest, int flags) 
+		{
+			dest.writeString(name);
+			dest.writeInt(expanded ? 1 : 0);
+			dest.writeTypedList(tags);
 		}
 	}
 	
@@ -227,7 +300,37 @@ public class TagCategories
 		return categories;
 	}
 	
-	// load a tagcategories instance from a string.. 
 	
+	//
+    // Parcelable interface
+    //
+
+    public static final Parcelable.Creator<TagCategories> CREATOR = new Parcelable.Creator<TagCategories>() 
+    {
+	    public TagCategories createFromParcel(Parcel in) {
+	        return new TagCategories(in);
+	    }
+	
+	    public TagCategories[] newArray(int size) {
+	        return new TagCategories[size];
+	    }
+	};
+	
+	private TagCategories(Parcel in)
+	{
+		in.readTypedList(categories, TagCategory.CREATOR);
+	}
+    
+	@Override
+	public int describeContents() 
+	{
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel dest, int flags) 
+	{
+		dest.writeTypedList(categories);
+	}
 
 }
