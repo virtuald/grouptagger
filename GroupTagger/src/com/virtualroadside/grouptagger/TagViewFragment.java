@@ -20,8 +20,10 @@ import com.virtualroadside.grouptagger.tagging.TagCategories;
 import com.virtualroadside.grouptagger.tagging.TagCategories.Tag;
 import com.virtualroadside.grouptagger.tagging.TagCategories.TagCategory;
 import com.virtualroadside.grouptagger.tagging.TagUtil;
+import com.virtualroadside.grouptagger.ui.FlowLayout;
 import com.virtualroadside.grouptagger.ui.MultiViewListAdapter;
 import com.virtualroadside.grouptagger.ui.MultiViewListAdapter.Row;
+import com.virtualroadside.grouptagger.ui.SelectableTagView;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -67,7 +69,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 	private static final String CURRENT_ITEM = "CURRENT_ITEM";
 	
 	TagCategories defaultCategories = null;
-	TagCategories currentTags = new TagCategories();
+	TagCategories mCurrentTags = new TagCategories();
 	
 	ExpandableListView listView;
 	TagViewAdapter mAdapter;
@@ -94,7 +96,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 		if (savedInstanceState != null)
 		{
 			mCurrentItem = savedInstanceState.getParcelable(CURRENT_ITEM);
-			currentTags = savedInstanceState.getParcelable(CURRENT_TAGS);
+			mCurrentTags = savedInstanceState.getParcelable(CURRENT_TAGS);
 			defaultCategories = savedInstanceState.getParcelable(DEFAULT_CATEGORIES);
 		}
 		
@@ -176,7 +178,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 		super.onSaveInstanceState(outState);
 		
 		outState.putParcelable(CURRENT_ITEM, mCurrentItem);
-		outState.putParcelable(CURRENT_TAGS, currentTags);
+		outState.putParcelable(CURRENT_TAGS, mCurrentTags);
 		outState.putParcelable(DEFAULT_CATEGORIES, defaultCategories);
 	}
 
@@ -191,7 +193,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 		if (mCurrentItem == null)
 			return;
 		
-		String tagString = currentTags.getSelectedAsString();
+		String tagString = mCurrentTags.getSelectedAsString();
 		
 		Log.i(TAG, "Saving tags: " + tagString);
 		
@@ -204,7 +206,7 @@ public class TagViewFragment extends Fragment implements HasTitle
 		// reset the categories to defaults
 		if (defaultCategories != null)
 		{
-			currentTags = new TagCategories(defaultCategories);
+			mCurrentTags = new TagCategories(defaultCategories);
 		}
 
 		// load the tags for the currently selected file, and set them
@@ -213,12 +215,24 @@ public class TagViewFragment extends Fragment implements HasTitle
 			File tagsFile = Util.getFileFromUri(getActivity(), mCurrentItem.getURI());
 			String tags = TagUtil.getTagsFromFile(tagsFile);
 			
-			currentTags.setSelectedFromString(tags);
+			mCurrentTags.setSelectedFromString(tags);
 		}
 		
 		// change it for the user
 		if (mAdapter != null)
 			mAdapter.notifyDataSetChanged();
+		
+		// go through and expand/collapse the groups
+		int i = 0;
+		for (TagCategory category: mCurrentTags.getCategories())
+		{
+			if (category.expanded)
+				listView.expandGroup(i);
+			else
+				listView.collapseGroup(i);
+		
+			i += 1;
+		}
 	}
 	
 	
@@ -454,25 +468,26 @@ public class TagViewFragment extends Fragment implements HasTitle
 		@Override
 		public int getGroupCount() 
 		{
-			return currentTags.getCategoryCount();
+			return mCurrentTags.getCategoryCount();
 		}
 
 		@Override
 		public int getChildrenCount(int groupPosition) 
 		{
-			return currentTags.getTagCount(groupPosition);
+			//return mCurrentTags.getTagCount(groupPosition);
+			return 1;
 		}
 
 		@Override
 		public Object getGroup(int groupPosition) 
 		{
-			return currentTags.getCategory(groupPosition);
+			return mCurrentTags.getCategory(groupPosition);
 		}
 
 		@Override
 		public Object getChild(int groupPosition, int childPosition) 
 		{
-			return currentTags.getTag(groupPosition, childPosition);
+			return mCurrentTags.getTag(groupPosition, childPosition);
 		}
 
 		@Override
@@ -520,41 +535,32 @@ public class TagViewFragment extends Fragment implements HasTitle
 			
 			textView.setText(category.name);
 			return textView;
-
 		}
 
 		@Override
-		public View getChildView(int groupPosition, int childPosition,
-				boolean isLastChild, View convertView, ViewGroup parent) 
+		public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) 
 		{
-			CheckBox checkBox;
+			FlowLayout flowLayout;
 			
 			if (convertView == null)
 			{
-				checkBox = new CheckBox(getActivity());
-				checkBox.setTextSize(0);
-				checkBox.setOnCheckedChangeListener(new OnCheckedChangeListener() 
-				{	
-					@Override
-					public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) 
-					{
-						Tag tag = (Tag)buttonView.getTag();
-						tag.selected = isChecked;
-					}
-				});
+				flowLayout = new FlowLayout(getActivity(), null);
 			}
 			else
 			{
-				checkBox = (CheckBox)convertView;
+				// TODO: reuse internal widgets too
+				flowLayout = (FlowLayout)convertView;
 			}
 			
-			Tag tag = (Tag)getChild(groupPosition, childPosition);
+			for (int i = 0; i < mCurrentTags.getTagCount(groupPosition); ++i)
+			{
+				SelectableTagView childView = new SelectableTagView(getActivity());
+				childView.setTag((Tag)getChild(groupPosition, i));
+				
+				flowLayout.addView(childView);
+			}
 			
-			checkBox.setTag(tag);
-			checkBox.setText(tag.name);
-			checkBox.setChecked(tag.selected);
-			
-			return checkBox;
+			return flowLayout;
 		}
 
 		@Override
