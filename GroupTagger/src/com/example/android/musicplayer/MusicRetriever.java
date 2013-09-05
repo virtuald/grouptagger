@@ -26,11 +26,8 @@ import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.util.Log;
 
-import java.io.File;
 import java.util.ArrayList;
 
-import com.virtualroadside.grouptagger.Util;
-import com.virtualroadside.grouptagger.tagging.TagUtil;
 
 /**
  * Retrieves and organizes media to play. Before being used, you must call {@link #prepare()},

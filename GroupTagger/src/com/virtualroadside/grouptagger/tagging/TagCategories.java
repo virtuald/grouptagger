@@ -1,25 +1,19 @@
 package com.virtualroadside.grouptagger.tagging;
 
 import java.io.InputStream;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-import com.example.android.musicplayer.MusicRetriever.Item;
 import com.virtualroadside.grouptagger.Util;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.JsonReader;
 
 public class TagCategories implements Parcelable
 {

@@ -3,10 +3,6 @@ package com.virtualroadside.grouptagger;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map.Entry;
-import java.util.SortedMap;
 
 import org.json.JSONException;
 
@@ -21,8 +17,6 @@ import com.virtualroadside.grouptagger.tagging.TagCategories.Tag;
 import com.virtualroadside.grouptagger.tagging.TagCategories.TagCategory;
 import com.virtualroadside.grouptagger.tagging.TagUtil;
 import com.virtualroadside.grouptagger.ui.FlowLayout;
-import com.virtualroadside.grouptagger.ui.MultiViewListAdapter;
-import com.virtualroadside.grouptagger.ui.MultiViewListAdapter.Row;
 import com.virtualroadside.grouptagger.ui.SelectableTagView;
 
 import android.content.ComponentName;
@@ -46,16 +40,9 @@ import android.view.View.OnClickListener;
 import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
-import android.widget.BaseAdapter;
 import android.widget.BaseExpandableListAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.CompoundButton;
 import android.widget.ExpandableListView;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
