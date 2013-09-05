@@ -19,4 +19,6 @@
 
 	<string name="app_title">GroupTagger</string>
 
+	<string name="search_icon">Search icon</string>
+
 </resources>

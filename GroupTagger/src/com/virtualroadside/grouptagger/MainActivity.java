@@ -3,6 +3,8 @@ package com.virtualroadside.grouptagger;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.virtualroadside.grouptagger.ui.SearchableFragment;
+
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -10,6 +12,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
+import android.view.KeyEvent;
 import android.view.Menu;
 
 public class MainActivity extends FragmentActivity 
@@ -21,6 +24,8 @@ public class MainActivity extends FragmentActivity
 	}
 	
 	List<Fragment> fragments = new ArrayList<Fragment>();
+	
+	ViewPager mViewPager;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) 
@@ -33,11 +38,11 @@ public class MainActivity extends FragmentActivity
 		fragments.add(new TagViewFragment());
 		
 		// setup the ViewPager
-		ViewPager viewPager = (ViewPager) findViewById(R.id.viewpager);
-		viewPager.setAdapter(new PageAdapter(getSupportFragmentManager()));
+		mViewPager = (ViewPager) findViewById(R.id.viewpager);
+		mViewPager.setAdapter(new PageAdapter(getSupportFragmentManager()));
 		
 		
-		viewPager.setOnPageChangeListener(onPageChanged);
+		mViewPager.setOnPageChangeListener(onPageChanged);
 	}
 
 	@Override
@@ -47,6 +52,33 @@ public class MainActivity extends FragmentActivity
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
+	
+	//
+	// Android events
+	//
+	
+	@Override
+    public boolean onKeyDown(int keycode, KeyEvent e) 
+	{
+        switch(keycode) 
+        {
+            case KeyEvent.KEYCODE_SEARCH:
+            	
+            	Fragment f = fragments.get(mViewPager.getCurrentItem());
+            	if (f instanceof SearchableFragment)
+            		((SearchableFragment)f).onSearch();
+            	
+            	break;
+            	
+            default:
+        }
+        
+        return super.onKeyDown(keycode, e);
+	}
+	
+	//
+	// Pager adapter stuff
+	//
 	
 	OnPageChangeListener onPageChanged = new OnPageChangeListener() {
 		
